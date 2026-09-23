@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoatende_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: autoatende
+      POSTGRES_PASSWORD: autoatende_dev_password
+      POSTGRES_DB: autoatende
+    ports:
+      - "5432:5432"
+    volumes:
+      - autoatende_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoatende -d autoatende"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  autoatende_postgres_data:
+    driver: local
