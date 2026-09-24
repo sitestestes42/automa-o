@@ -7,6 +7,51 @@ import { registerErrorHandler } from "./shared/plugins/error-handler";
 import { registerHealthRoute } from "./shared/plugins/health-route";
 
 /**
+ * Remove barra(s) finais de uma URL, para que "https://x.com/" e
+ * "https://x.com" sejam tratados como a mesma origem.
+ */
+function normalizeOrigin(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+/**
+ * Cria a função de validação de origem usada pelo @fastify/cors.
+ *
+ * Por que uma função em vez de uma lista fixa de strings:
+ * o valor de WEB_APP_URL (vindo de variável de ambiente) pode ter uma
+ * barra final, espaço em branco, ou diferença de maiúsculas/minúsculas
+ * em relação ao header `Origin` que o navegador envia — uma comparação
+ * de igualdade exata falha nesses casos e o CORS bloqueia a requisição
+ * silenciosamente (o navegador nunca entrega a resposta ao JS, então
+ * o fetch cai direto no catch, parecendo "API fora do ar").
+ *
+ * Também aceita múltiplas origens em WEB_APP_URL separadas por vírgula,
+ * útil para permitir o domínio de produção e domínios de preview do
+ * Vercel ao mesmo tempo, sem abrir CORS para qualquer origem.
+ */
+function buildCorsOriginChecker(webAppUrl: string) {
+  const allowedOrigins = webAppUrl
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean);
+
+  return (
+    requestOrigin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+    // Requisições sem header Origin (ex: curl, health checks server-to-server)
+    // não são chamadas de navegador cross-origin: permitidas.
+    if (!requestOrigin) {
+      callback(null, true);
+      return;
+    }
+
+    const isAllowed = allowedOrigins.includes(normalizeOrigin(requestOrigin));
+    callback(null, isAllowed);
+  };
+}
+
+/**
  * Cria e configura a instância do Fastify.
  * Separado de server.ts para permitir testes de integração
  * (instanciar o app sem subir a porta de rede).
@@ -28,7 +73,7 @@ export async function buildApp() {
   await app.register(sensible);
 
   await app.register(cors, {
-    origin: [env.WEB_APP_URL],
+    origin: buildCorsOriginChecker(env.WEB_APP_URL),
     credentials: true,
   });
 

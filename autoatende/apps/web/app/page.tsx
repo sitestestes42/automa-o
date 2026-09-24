@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getApiEndpoint, getApiUrl } from "@/lib/api";
 
 type HealthStatus = {
   status: "ok" | "degradado";
@@ -13,15 +14,13 @@ type CheckState =
   | { kind: "success"; data: HealthStatus }
   | { kind: "error"; message: string };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
-
 export default function HomePage() {
   const [check, setCheck] = useState<CheckState>({ kind: "loading" });
 
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/health`)
+    fetch(getApiEndpoint("/health"))
       .then(async (res) => {
         const data = (await res.json()) as HealthStatus;
         if (!cancelled) setCheck({ kind: "success", data });
@@ -89,7 +88,7 @@ export default function HomePage() {
       </div>
 
       <p className="mt-8 text-sm text-slate-400">
-        API base URL: <code className="rounded bg-slate-100 px-1.5 py-0.5">{API_URL}</code>
+        API base URL: <code className="rounded bg-slate-100 px-1.5 py-0.5">{getApiUrl()}</code>
       </p>
     </main>
   );

@@ -17,7 +17,10 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, "JWT_SECRET deve ter pelo menos 16 caracteres"),
   JWT_EXPIRES_IN: z.string().default("1d"),
 
-  WEB_APP_URL: z.string().url().default("http://localhost:3000"),
+  // Aceita uma URL ou múltiplas separadas por vírgula (ex: produção + preview do Vercel).
+  // Validação de formato de URL é feita na montagem do CORS (app.ts), não aqui,
+  // porque um valor com múltiplas origens não é uma única URL válida para o Zod.
+  WEB_APP_URL: z.string().min(1, "WEB_APP_URL é obrigatória").default("http://localhost:3000"),
 
   WHATSAPP_MODE: z.enum(["demo", "production"]).default("demo"),
 
