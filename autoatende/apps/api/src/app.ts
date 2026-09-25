@@ -46,7 +46,16 @@ function buildCorsOriginChecker(webAppUrl: string) {
       return;
     }
 
-    const isAllowed = allowedOrigins.includes(normalizeOrigin(requestOrigin));
+    const normalizedRequestOrigin = normalizeOrigin(requestOrigin);
+    const isAllowed = allowedOrigins.includes(normalizedRequestOrigin);
+
+    if (!isAllowed) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[CORS] Origem rejeitada: "${normalizedRequestOrigin}". Permitidas: ${allowedOrigins.join(", ")}`,
+      );
+    }
+
     callback(null, isAllowed);
   };
 }
@@ -76,6 +85,14 @@ export async function buildApp() {
     origin: buildCorsOriginChecker(env.WEB_APP_URL),
     credentials: true,
   });
+
+  // Log de diagnóstico: mostra exatamente qual(is) origem(ns) o CORS
+  // está aceitando neste processo, no momento em que ele sobe. Útil para
+  // confirmar, direto nos logs do Railway/Vercel, se a variável de
+  // ambiente configurada no painel realmente chegou até o processo em
+  // execução (evita depender de "achismo" quando o navegador reporta
+  // erro de CORS).
+  app.log.info(`🔐 CORS habilitado para: ${env.WEB_APP_URL}`);
 
   await app.register(jwt, {
     secret: env.JWT_SECRET,
